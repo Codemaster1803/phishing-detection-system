@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>AI Phishing Detector</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>AI Phishing Detector</h2>
+
+<button id="scan">Scan Website</button>
+
+<div class="card">
+
+<h3>Final Result</h3>
+<p id="result">Click Scan to analyze</p>
+<p id="confidence"></p>
+
+</div>
+
+<div class="card">
+
+<h3>Agent Scores</h3>
+
+<div class="score">
+URL Agent
+<div id="url_score">-</div>
+</div>
+
+<div class="score">
+NLP Agent
+<div id="nlp_score">-</div>
+</div>
+
+<div class="score">
+Domain Agent
+<div id="domain_score">-</div>
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>Why this result?</h3>
+<p id="explanation">Run scan to see explanation.</p>
+
+</div>
+
+</div>
+
+<script src="popup.js"></script>
+
+</body>
+</html>

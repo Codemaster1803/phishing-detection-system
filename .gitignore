@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+*.pyc
+.idea/
+.vscode/
+
+# Models (IMPORTANT)
+*.pkl
+*.pt
+*.bin
+
+# HuggingFace / checkpoints
+agents/nlp_agent/models/
+checkpoint-*/
+
+dataset/
+*.csv
