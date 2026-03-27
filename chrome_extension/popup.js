@@ -29,9 +29,10 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({
-url:response.url,
-text:response.text
+body: JSON.stringify({
+    url: response.url,
+    text: response.text,
+    form_destinations: response.form_destinations
 })
 
 });

@@ -36,7 +36,7 @@ from agents.url_agent.feature_extraction import extract_features
 # ─────────────────────────────────────────────
 print("=" * 60)
 print("LOADING DATA...")
-df = pd.read_csv("../datasets/url_data_clean.csv")   # <-- update path as needed
+df = pd.read_csv("../dataset/url_data_clean.csv")   # <-- update path as needed
 print(f"Total samples: {len(df)}")
 print(f"Label distribution:\n{df['label'].value_counts()}")
 
@@ -125,8 +125,8 @@ print(importance.head(15).to_string())
 # ─────────────────────────────────────────────
 # 7. Save Models
 # ─────────────────────────────────────────────
-joblib.dump({"rf": rf, "et": et, "gb": gb}, "../model/url_model_ensemble.pkl")
-joblib.dump(list(X.columns), "../model/feature_columns.pkl")
+joblib.dump({"rf": rf, "et": et, "gb": gb}, "../models/url_model_ensemble.pkl")
+joblib.dump(list(X.columns), "../models/feature_columns.pkl")
 
 print(f"\n✅ Models saved: url_model_ensemble.pkl")
 print(f"✅ Feature list saved: feature_columns.pkl")

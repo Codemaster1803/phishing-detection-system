@@ -15,3 +15,26 @@ checkpoint-*/
 
 dataset/
 *.csv
+
+# ========================
+# DATASETS (NLP)
+# ========================
+agents/nlp_agent/datasets and preprocessing/*.csv
+agents/nlp_agent/datasets and preprocessing/*.txt
+
+# ========================
+# MODELS (NLP)
+# ========================
+agents/nlp_agent/models/
+*.pkl
+*.pt
+*.bin
+
+# ========================
+# GENERAL
+# ========================
+__pycache__/
+*.pyc
+venv/
+.vscode/
+.idea/
