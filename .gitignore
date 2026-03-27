@@ -19,8 +19,9 @@ dataset/
 # ========================
 # DATASETS (NLP)
 # ========================
-agents/nlp_agent/datasets and preprocessing/*.csv
-agents/nlp_agent/datasets and preprocessing/*.txt
+agents/nlp_agent/preprocessing/*.csv
+agents/nlp_agent/preprocessing/*.txt
+
 
 # ========================
 # MODELS (NLP)
