@@ -1,77 +1,149 @@
 document.getElementById("scan").addEventListener("click", async () => {
 
-document.getElementById("result").innerText = "Reading page...";
-document.getElementById("confidence").innerText = "";
-document.getElementById("explanation").innerText = "";
+    const resultElement = document.getElementById("result");
+    const confidenceElement = document.getElementById("confidence");
+    const explanationList = document.getElementById("explanation");
 
-const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
+    const loading = document.getElementById("loading");
+    const loadingText = document.getElementById("loadingText");
+    const scanBtn = document.getElementById("scan");
+    const resultCard = document.getElementById("resultCard");
 
-try{
+    // Badge helper function (clean + reusable)
+    function updateBadge(type, text) {
+        const badge = document.getElementById("statusBadge");
+        badge.className = "badge " + type;
+        badge.innerText = text;
+    }
 
-await chrome.scripting.executeScript({
-target: {tabId: tab.id},
-files: ["content.js"]
-});
+    // =========================
+    // SHOW RESULT SECTION ONLY AFTER CLICK
+    // =========================
+    resultCard.classList.remove("hidden");
 
-chrome.tabs.sendMessage(tab.id,{action:"getPageData"}, async (response)=>{
+    // =========================
+    // START LOADING STATE
+    // =========================
+    loading.classList.remove("hidden");
+    loadingText.innerText = "Reading page...";
+    scanBtn.disabled = true;
 
-if(!response){
-document.getElementById("result").innerText="Could not read page content";
-return;
-}
+    resultElement.innerText = "Reading page...";
+    confidenceElement.innerText = "";
+    explanationList.innerHTML = "";
 
-document.getElementById("result").innerText = "Analyzing with AI agents...";
+    updateBadge("neutral", "SCANNING...");
 
-const apiResponse = await fetch("http://127.0.0.1:8000/analyze",{
+    // Reset bars
+    document.getElementById("url_bar").style.width = "0%";
+    document.getElementById("nlp_bar").style.width = "0%";
+    document.getElementById("domain_bar").style.width = "0%";
 
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+    try {
 
-body: JSON.stringify({
-    url: response.url,
-    text: response.text,
-    form_destinations: response.form_destinations
-})
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-});
+        // Inject content script
+        await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["content.js"]
+        });
 
-const data = await apiResponse.json();
+        loadingText.innerText = "Extracting page data...";
 
-const resultElement = document.getElementById("result");
+        chrome.tabs.sendMessage(tab.id, { action: "getPageData" }, async (response) => {
 
-resultElement.innerText =
-data.final_label + " (" + data.final_probability.toFixed(2) + ")";
+            if (!response) {
+                resultElement.innerText = "❌ Could not read page content";
+                updateBadge("danger", "ERROR");
 
-if(data.final_label === "Phishing"){
-resultElement.style.color = "#ff4d4d";
-}else{
-resultElement.style.color = "#22c55e";
-}
+                loading.classList.add("hidden");
+                scanBtn.disabled = false;
+                return;
+            }
 
-document.getElementById("confidence").innerText =
-"Confidence: " + data.confidence;
+            resultElement.innerText = "Analyzing with AI...";
+            loadingText.innerText = "Running AI agents...";
 
-document.getElementById("url_score").innerText =
-data.agents.url_agent.score.toFixed(2);
+            try {
 
-document.getElementById("nlp_score").innerText =
-data.agents.nlp_agent.score.toFixed(2);
+                const apiResponse = await fetch("http://127.0.0.1:8000/analyze", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        url: response.url,
+                        text: response.text,
+                        form_destinations: response.form_destinations
+                    })
+                });
 
-document.getElementById("domain_score").innerText =
-data.agents.domain_agent.score.toFixed(2);
+                const data = await apiResponse.json();
 
-document.getElementById("explanation").innerText =
-data.explanation;
+                // =========================
+                // RESULT + BADGE
+                // =========================
+                resultElement.innerText = data.final_label;
+                confidenceElement.innerText = "Confidence: " + data.confidence;
 
-});
+                if (data.final_label === "Phishing") {
+                    updateBadge("danger", "🚨 PHISHING");
+                } else if (data.final_label === "Suspicious") {
+                    updateBadge("warn", "⚠️ SUSPICIOUS");
+                } else {
+                    updateBadge("safe", "🟢 SAFE");
+                }
 
-}catch(error){
+                // =========================
+                // AGENT SCORES (BARS)
+                // =========================
+                document.getElementById("url_bar").style.width =
+                    (data.agents.url_agent.score * 100) + "%";
 
-document.getElementById("result").innerText =
-"Error connecting to backend";
+                document.getElementById("nlp_bar").style.width =
+                    (data.agents.nlp_agent.score * 100) + "%";
 
-}
+                document.getElementById("domain_bar").style.width =
+                    (data.agents.domain_agent.score * 100) + "%";
+
+                // =========================
+                // EXPLANATION (LIST)
+                // =========================
+                explanationList.innerHTML = "";
+
+                if (data.explanation) {
+                    data.explanation.split(".").forEach(item => {
+                        if (item.trim()) {
+                            const li = document.createElement("li");
+                            li.innerText = item.trim();
+                            explanationList.appendChild(li);
+                        }
+                    });
+                }
+
+                // =========================
+                // END LOADING
+                // =========================
+                loading.classList.add("hidden");
+                scanBtn.disabled = false;
+
+            } catch (apiError) {
+                resultElement.innerText = "❌ Backend error";
+                updateBadge("danger", "ERROR");
+
+                loading.classList.add("hidden");
+                scanBtn.disabled = false;
+            }
+
+        });
+
+    } catch (error) {
+        resultElement.innerText = "❌ Error connecting to backend";
+        updateBadge("danger", "ERROR");
+
+        loading.classList.add("hidden");
+        scanBtn.disabled = false;
+    }
 
 });

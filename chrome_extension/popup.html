@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-<title>AI Phishing Detector</title>
+<meta charset="UTF-8">
+<title>PhishLens</title>
 <link rel="stylesheet" href="style.css">
 </head>
 
@@ -10,49 +10,48 @@
 
 <div class="container">
 
-<h2>AI Phishing Detector</h2>
+<h2>🛡️ PhishLens</h2>
 
-<button id="scan">Scan Website</button>
+<button id="scan">🔍 Scan Website</button>
 
-<div class="card">
-
-<h3>Final Result</h3>
+<div class="card result-card hidden" id="resultCard">
+<div id="statusBadge" class="badge neutral"></div>
 <p id="result">Click Scan to analyze</p>
 <p id="confidence"></p>
+</div>
+
+<div id="loading" class="loading hidden">
+  <div class="spinner"></div>
+  <p id="loadingText">Analyzing...</p>
+</div>
+
+<div class="card">
+<h3>⚙️ Agent Scores</h3>
+
+<div class="agent">
+<span>URL Agent</span>
+<div class="bar"><div id="url_bar" class="fill"></div></div>
+</div>
+
+<div class="agent">
+<span>NLP Agent</span>
+<div class="bar"><div id="nlp_bar" class="fill"></div></div>
+</div>
+
+<div class="agent">
+<span>Domain Agent</span>
+<div class="bar"><div id="domain_bar" class="fill"></div></div>
+</div>
 
 </div>
 
 <div class="card">
-
-<h3>Agent Scores</h3>
-
-<div class="score">
-URL Agent
-<div id="url_score">-</div>
-</div>
-
-<div class="score">
-NLP Agent
-<div id="nlp_score">-</div>
-</div>
-
-<div class="score">
-Domain Agent
-<div id="domain_score">-</div>
-</div>
-
-</div>
-
-<div class="card">
-
-<h3>Why this result?</h3>
-<p id="explanation">Run scan to see explanation.</p>
-
+<h3>💡 Why this result?</h3>
+<ul id="explanation"></ul>
 </div>
 
 </div>
 
 <script src="popup.js"></script>
-
 </body>
 </html>

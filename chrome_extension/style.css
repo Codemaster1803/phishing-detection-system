@@ -2,7 +2,7 @@ body{
 font-family: Arial;
 background:#0f172a;
 color:white;
-width:300px;
+width:320px;
 }
 
 .container{
@@ -16,49 +16,119 @@ color:#38bdf8;
 
 .card{
 background:#1e293b;
-padding:10px;
-border-radius:8px;
-margin-top:10px;
-}
-
-.score{
-margin-top:8px;
-padding:5px;
-background:#334155;
-border-radius:5px;
+padding:12px;
+border-radius:10px;
+margin-top:12px;
+box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
 button{
 width:100%;
-padding:10px;
+padding:12px;
 margin-top:10px;
-background:#3b82f6;
+background: linear-gradient(135deg,#4c8bf5,#6a5cff);
 border:none;
 color:white;
-font-size:14px;
-border-radius:6px;
+font-size:15px;
+border-radius:8px;
 cursor:pointer;
+transition:0.2s;
 }
 
 button:hover{
-background:#2563eb;
+transform:scale(1.05);
 }
 
 #result{
 font-size:18px;
 font-weight:bold;
-margin-top:5px;
+margin-top:8px;
+text-align:center;
 }
 
 #confidence{
 font-size:13px;
 color:#94a3b8;
+text-align:center;
+}
+
+/* Badge */
+.badge{
+text-align:center;
+padding:6px;
+border-radius:6px;
+font-weight:bold;
+margin-bottom:6px;
+}
+
+.badge.safe{ background:#22c55e; }
+.badge.warn{ background:#facc15; color:black; }
+.badge.danger{ background:#ef4444; }
+.badge.neutral{ background:#334155; }
+
+/* Agent bars */
+.agent{
+margin-top:10px;
+}
+
+.bar{
+background:#334155;
+height:8px;
+border-radius:6px;
 margin-top:4px;
 }
 
+.fill{
+height:100%;
+width:0%;
+background:#4c8bf5;
+border-radius:6px;
+transition:0.4s;
+}
+
+/* Explanation */
 #explanation{
 font-size:12px;
-line-height:1.4;
 color:#cbd5f5;
 margin-top:5px;
+padding-left:15px;
+}
+
+/* Loading container */
+.loading {
+  text-align: center;
+  margin-top: 12px;
+}
+
+/* Hide initially */
+.hidden {
+  display: none;
+}
+
+/* Spinner */
+.spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid #334155;
+  border-top: 3px solid #38bdf8;
+  border-radius: 50%;
+  margin: auto;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Animation */
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading text */
+#loadingText {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+.hidden {
+  display: none;
 }
