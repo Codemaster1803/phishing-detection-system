@@ -10,12 +10,6 @@ Analyzes domains using 6 checks:
   6. VirusTotal API (optional)
 
 No ML model needed - pure domain intelligence.
-
-FIXES APPLIED:
-  - WHOIS timeout added (5 seconds) to prevent hanging
-  - VirusTotal API key loaded from .env file (not hardcoded)
-  - MX record penalty reduced (0.10 → 0.05) to reduce false positives
-  - Domain age fallback score reduced (0.15 → 0.10)
 """
 
 import re
@@ -23,27 +17,12 @@ import ssl
 import socket
 import logging
 import time
-import os
-import concurrent.futures
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("DomainAgent")
-
-# ─────────────────────────────────────────────
-# Load API Key from .env (never hardcode!)
-# ─────────────────────────────────────────────
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass  # dotenv optional
-
-VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY", "")
-
 
 # ─────────────────────────────────────────────
 # Output Schema
@@ -126,36 +105,21 @@ def check_suspicious_tld(domain: str) -> tuple[bool, str]:
 
 
 # ─────────────────────────────────────────────
-# Check 4 - Domain Age via WHOIS (WITH TIMEOUT FIX)
+# Check 4 - Domain Age via WHOIS
 # ─────────────────────────────────────────────
 
-def _whois_lookup(domain: str):
-    """Internal WHOIS lookup (run inside thread with timeout)."""
-    import whois
-    return whois.whois(domain)
-
-
-def check_domain_age(domain: str, timeout: int = 5) -> tuple[int, str]:
+def check_domain_age(domain: str) -> tuple[int, str]:
     """
     Queries WHOIS database to find when domain was registered.
     New domains (< 30 days) are highly suspicious.
     Returns: (age_in_days, creation_date_string)
-    Returns (-1, 'unknown') if lookup fails or times out.
-
-    FIX: Added 5-second timeout via ThreadPoolExecutor to prevent hanging.
+    Returns (-1, 'unknown') if lookup fails.
     """
     try:
+        import whois
         from datetime import datetime
 
-        # ✅ FIX: Run WHOIS in a thread with a timeout
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_whois_lookup, domain)
-            try:
-                w = future.result(timeout=timeout)
-            except concurrent.futures.TimeoutError:
-                logger.warning(f"WHOIS timeout for {domain} (>{timeout}s)")
-                return -1, 'timeout'
-
+        w = whois.whois(domain)
         creation_date = w.creation_date
 
         # creation_date can be a list or single value
@@ -315,8 +279,6 @@ def check_virustotal(domain: str, api_key: str) -> dict:
     Checks domain against 70+ security engines via VirusTotal API.
     Free API key: https://virustotal.com
     Returns: malicious count, total engines checked
-
-    FIX: API key now loaded from environment variable, not hardcoded.
     """
     result = {
         'checked': False,
@@ -326,12 +288,18 @@ def check_virustotal(domain: str, api_key: str) -> dict:
         'error': None
     }
 
-    if not api_key:
+    if not api_key or api_key == 'aef65939dd6f455ee7f69bc751d155f98c93ed476120bca5c99e13b7f68559d1':
         result['error'] = 'No API key provided'
         return result
 
     try:
         import requests
+        import base64
+
+        # Encode domain for API
+        domain_id = base64.urlsafe_b64encode(
+            domain.encode()
+        ).decode().strip('=')
 
         url = f'https://www.virustotal.com/api/v3/domains/{domain}'
         headers = {'x-apikey': api_key}
@@ -364,10 +332,6 @@ def calculate_risk_score(checks: dict) -> tuple[float, list]:
     """
     Combines all check results into a final risk score.
     Each check contributes a weight to the total score.
-
-    FIXES:
-      - Domain age unknown fallback: 0.15 → 0.10 (less penalty for timeout)
-      - MX record missing penalty: 0.10 → 0.05 (many legit sites lack MX)
     """
     score = 0.0
     risk_factors = []
@@ -380,7 +344,7 @@ def calculate_risk_score(checks: dict) -> tuple[float, list]:
     # Domain age
     age = checks.get('domain_age_days', -1)
     if age == -1:
-        score += 0.10  # ✅ FIX: reduced from 0.15 (timeout shouldn't heavily penalize)
+        score += 0.15
         risk_factors.append("⚠️  Domain age could not be determined")
     elif age < 7:
         score += 0.40
@@ -399,7 +363,7 @@ def calculate_risk_score(checks: dict) -> tuple[float, list]:
 
     # No MX records
     if not checks.get('dns', {}).get('has_mx_record'):
-        score += 0.05  # ✅ FIX: reduced from 0.10 (many legit sites have no MX)
+        score += 0.10
         risk_factors.append("⚠️  No email server (MX) records found")
 
     # Domain doesn't resolve
@@ -450,15 +414,10 @@ class DomainIntelligenceAgent:
     Domain Intelligence Agent.
     Runs all checks on a domain and returns risk assessment.
     No ML model needed - pure domain intelligence.
-
-    FIX: API key now loaded from .env via VIRUSTOTAL_API_KEY env variable.
-    Add to your .env file:
-        VIRUSTOTAL_API_KEY=your_actual_key_here
     """
 
-    def __init__(self, virustotal_api_key: str = None):
-        # ✅ FIX: Use env variable if no key passed explicitly
-        self.vt_api_key = virustotal_api_key or VIRUSTOTAL_API_KEY
+    def __init__(self, virustotal_api_key: str = 'YOUR_API_KEY_HERE'):
+        self.vt_api_key = virustotal_api_key
         logger.info("✅ Domain Intelligence Agent ready.")
 
     def analyze(self, url: str) -> DomainAgentResult:
@@ -479,8 +438,8 @@ class DomainIntelligenceAgent:
         checks['suspicious_tld'] = is_suspicious_tld
         checks['tld'] = tld
 
-        # Check 3 - Domain Age (with timeout fix)
-        age_days, creation_date = check_domain_age(domain, timeout=5)
+        # Check 3 - Domain Age
+        age_days, creation_date = check_domain_age(domain)
         checks['domain_age_days'] = age_days
         checks['domain_creation_date'] = creation_date
 
@@ -521,7 +480,9 @@ class DomainIntelligenceAgent:
 
 if __name__ == "__main__":
 
-    agent = DomainIntelligenceAgent()  # API key loaded from .env
+    agent = DomainIntelligenceAgent(
+        virustotal_api_key='YOUR_API_KEY_HERE'  # optional
+    )
 
     test_urls = [
         # Suspicious domains
