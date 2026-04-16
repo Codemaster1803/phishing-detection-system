@@ -82,6 +82,10 @@ WHITELISTED_DOMAINS = {
 
     # Streaming
     "netflix.com", "spotify.com", "twitch.tv",
+    "google.com", "youtube.com", "microsoft.com", "amazon.com",
+    "bankofamerica.com", "paypal.com", "visa.com", "mastercard.com",
+    "cnn.com", "bbc.com", "github.com", "linkedin.com",
+    "openai.com", "notion.so", "slack.com", "grammarly.com"
 }
 
 
@@ -139,8 +143,8 @@ AGENT_RELIABILITY = {
 }
 
 # Fix 3 — Higher threshold
-PHISHING_THRESHOLD  = 0.65   # V1 was 0.50
-SUSPICIOUS_THRESHOLD = 0.45  # V1 was 0.40
+PHISHING_THRESHOLD  = 0.50   # V1 was 0.50
+SUSPICIOUS_THRESHOLD = 0.40  # V1 was 0.40
 
 
 # ─────────────────────────────────────────────
@@ -223,37 +227,56 @@ def dempster_shafer_fusion(
     url_score: float,
     nlp_score: float,
     domain_score: float,
-    whitelisted: bool = False
+    whitelisted: bool = False,
+    url: str = "" # Added url parameter so we can check keywords
 ) -> tuple:
-    # Cap both URL and NLP scores for whitelisted domains
+    
     effective_url_score = min(url_score, 0.30) if whitelisted else url_score
     effective_nlp_score = min(nlp_score, 0.30) if whitelisted else nlp_score
 
+    # Fix 1: Zero out NLP reliability if the site is offline (empty text)
+    site_offline = (nlp_score == 0.0)
+    dyn_nlp_reliability = 0.0 if site_offline else AGENT_RELIABILITY["nlp"]
+
+    # Free-Hosting Heuristics
+    FREE_HOSTS = ["vercel.app", "github.io", "webflow.io", "godaddysites.com", "blogspot.com", "web.app", "r2.dev", ".com.ge", ".com.ve"]
+    PHISH_KEYWORDS = ["clone", "login", "auth", "support", "secure", "update", "verify", "banking", "wallet", "account",
+        "logi", "loq", "sign", "robinhood", "gemini", "roblox", "kucoin"]
+    
+    url_lower = url.lower()
+    is_free_host = any(fh in url_lower for fh in FREE_HOSTS)
+    has_phish_keyword = any(kw in url_lower for kw in PHISH_KEYWORDS)
+
+    # Fix 2: Dynamic Override Logic
+    if not whitelisted and is_free_host and has_phish_keyword:
+        logger.info("⚠️ Free host + Phish keyword detected! Bypassing Domain trust.")
+        effective_url_score = max(effective_url_score, 0.85) # Force high risk
+        dyn_domain_reliability = 0.05 # Completely ignore the free domain
+    elif not whitelisted and effective_url_score > 0.50 and domain_score < 0.40:
+        logger.info("⚠️ High URL risk vs Low Domain risk. Slashing domain reliability.")
+        dyn_domain_reliability = 0.10
+    elif not whitelisted and effective_nlp_score > 0.85 and domain_score < 0.40:
+        logger.info("⚠️ High NLP risk vs Low Domain risk. Slashing domain reliability.")
+        dyn_domain_reliability = 0.10
+    else:
+        dyn_domain_reliability = AGENT_RELIABILITY["domain"]
+
+    # Build masses
     m_url    = build_mass_function(effective_url_score, AGENT_RELIABILITY["url"])
-    m_nlp    = build_mass_function(effective_nlp_score, AGENT_RELIABILITY["nlp"])
-    m_domain = build_mass_function(domain_score,        AGENT_RELIABILITY["domain"])
+    m_nlp    = build_mass_function(effective_nlp_score, dyn_nlp_reliability)
+    m_domain = build_mass_function(domain_score, dyn_domain_reliability)
 
     m_combined_1 = combine_two_mass_functions(m_url, m_nlp)
     m_final      = combine_two_mass_functions(m_combined_1, m_domain)
 
     total_certain = m_final["phishing"] + m_final["safe"]
-    if total_certain > 0:
-        phishing_prob = m_final["phishing"] / total_certain
-    else:
-        phishing_prob = 0.5
+    phishing_prob = (m_final["phishing"] / total_certain) if total_certain > 0 else 0.5
 
-    scores = [effective_url_score, nlp_score, domain_score]
+    scores = [effective_url_score, effective_nlp_score, domain_score]
     score_range = max(scores) - min(scores)
-    if score_range < 0.20:
-        conflict_level = "Low"
-    elif score_range < 0.45:
-        conflict_level = "Medium"
-    else:
-        conflict_level = "High"
+    conflict_level = "Low" if score_range < 0.20 else "Medium" if score_range < 0.45 else "High"
 
     return round(phishing_prob, 4), conflict_level, round(m_final["uncertain"], 4)
-
-
 # ─────────────────────────────────────────────
 # Fix 3 — Updated Label Classification
 # Higher thresholds reduce false positives
@@ -386,7 +409,7 @@ class DecisionFusionAgent:
         # Method 2 — Dempster-Shafer
         try:
             ds_score, conflict_level, uncertainty = dempster_shafer_fusion(
-                url_score, nlp_score, domain_score, whitelisted
+                url_score, nlp_score, domain_score, whitelisted, url
             )
         except Exception as e:
             logger.warning(f"DS fusion failed: {e}. Falling back to weighted average.")

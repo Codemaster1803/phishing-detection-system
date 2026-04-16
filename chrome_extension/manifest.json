@@ -3,28 +3,31 @@
   "name": "PhishLens",
   "version": "1.0",
   "description": "Detect phishing websites using Multi-Agent AI",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "tabs"],
   "host_permissions": [
-"http://localhost:8000/*",
-"http://127.0.0.1:8000/*"
-],
+    "http://localhost:8000/*",
+    "http://127.0.0.1:8000/*"
+  ],
   "action": {
-  "default_popup": "popup.html",
-  "default_icon": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "PhishLens_icon-16.png",
+      "48": "PhishLens_icon-48.png",
+      "128": "PhishLens_icon-128.png"
+    }
+  },
+  "icons": {
     "16": "PhishLens_icon-16.png",
     "48": "PhishLens_icon-48.png",
     "128": "PhishLens_icon-128.png"
-  }
-},
-"icons": {
-  "16": "PhishLens_icon-16.png",
-  "48": "PhishLens_icon-48.png",
-  "128": "PhishLens_icon-128.png"
-},
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
-  ]
-}
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }}

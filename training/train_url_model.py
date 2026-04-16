@@ -36,7 +36,7 @@ from agents.url_agent.feature_extraction import extract_features
 # ─────────────────────────────────────────────
 print("=" * 60)
 print("LOADING DATA...")
-df = pd.read_csv("../dataset/url_data_clean.csv")   # <-- update path as needed
+df = pd.read_csv("../dataset/PhishBenignDataset.csv")   # <-- update path as needed
 print(f"Total samples: {len(df)}")
 print(f"Label distribution:\n{df['label'].value_counts()}")
 

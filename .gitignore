@@ -8,6 +8,7 @@ __pycache__/
 *.pkl
 *.pt
 *.bin
+*.keras
 
 # HuggingFace / checkpoints
 agents/nlp_agent/models/
